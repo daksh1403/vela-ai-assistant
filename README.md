@@ -2,7 +2,7 @@
 
 **One assistant. Three ways to explore.** Vela brings text chat, image creation, and live voice into one focused workspace. It is designed as a secure AI product and a reviewable platform exercise: the permanent CallMissed key stays behind the API, every paid operation is bounded, and each request can be traced by ID.
 
-> **Live deployment:** [vela-assistant.dakshx.workers.dev](https://vela-assistant.dakshx.workers.dev). The UI and HTTPS ingress are live. AI operations are intentionally unavailable until a newly rotated CallMissed key is installed; real-provider and microphone verification remain pending.
+> **Live deployment:** [vela-assistant.dakshx.workers.dev](https://vela-assistant.dakshx.workers.dev). HTTPS, chat, image generation, and browser voice connection were verified against CallMissed on 29 September 2026. A human microphone and speaker check remains pending.
 
 ![Vela home screen](docs/vela-home.png)
 
@@ -141,7 +141,7 @@ The browser test suite covers chat streaming, image output, and microphone denia
 5. Verify the assigned `*.workers.dev` HTTPS URL using the checklist below. Bind a custom domain in Cloudflare if desired.
 6. For CD, configure GitHub production environment secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, and variable `PUBLIC_APP_URL`. Set the repository variable `DEPLOY_ENABLED=true` after those values and the CallMissed secret are ready. The `Deploy Cloudflare` workflow then runs after CI succeeds on `main`, or manually. Keep the provider secret in Cloudflare, outside GitHub Actions.
 
-Cloudflare static assets and Worker API share a hostname; Cloudflare terminates TLS. The Durable Object migration in `wrangler.jsonc` is SQLite-backed and compatible with the Workers Free plan. The Worker needs a key secret before it is ready.
+Cloudflare static assets and Worker API share a hostname; Cloudflare terminates TLS. The Durable Object migration in `wrangler.jsonc` is SQLite-backed and compatible with the Workers Free plan. The Worker returns readiness 503 if the key secret is missing or still a placeholder.
 
 ### Docker on EC2 or a VM
 
@@ -156,12 +156,13 @@ Caddy obtains and renews a Let's Encrypt certificate, redirects HTTP to HTTPS, s
 
 ## Production verification checklist
 
-- [ ] HTTPS certificate, HTTP redirect, security headers, and responsive UI checked at the live URL
-- [ ] Live chat answer, multi-turn history, and streaming observed with a rotated key
-- [ ] Live image generated and downloaded
-- [ ] Microphone granted, LiveKit connected, user audio sent, agent audio heard, and session ended
-- [ ] Transcript events displayed when the selected voice stack emits them
-- [ ] Browser network traffic and built JavaScript inspected for permanent key exposure
+- [x] HTTPS, security headers, and responsive UI checked at the live URL (Cloudflare hostname is HTTPS only)
+- [x] Live chat answer, multi-turn history, and streaming observed with a new key
+- [x] Live image generation returned valid JPEG bytes; browser image rendering covered by the browser smoke test
+- [x] Voice session created and ended through the API; headless Chromium connected with a test microphone, attached a remote audio track, and cleaned it up on end
+- [ ] Human microphone input and audible agent response confirmed on a real device
+- [x] A transcript event appeared in the live browser session
+- [x] Browser requests and built JavaScript inspected for permanent key exposure
 - [ ] 429, 5xx, slow provider, offline browser, invalid input, microphone denial, disconnect, duplicate click, and restart behavior checked
 - [ ] Request IDs found in responses and structured logs; rate limits and operational charts checked
 
