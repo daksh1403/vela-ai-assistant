@@ -2,7 +2,7 @@
 
 **One assistant. Three ways to explore.** Vela brings text chat, image creation, and live voice into one focused workspace. It is designed as a secure AI product and a reviewable platform exercise: the permanent CallMissed key stays behind the API, every paid operation is bounded, and each request can be traced by ID.
 
-> **Live demo:** Pending Cloudflare account authentication and a newly rotated CallMissed key. No live URL or real-provider verification is claimed yet.
+> **Live deployment:** [vela-assistant.dakshx.workers.dev](https://vela-assistant.dakshx.workers.dev). The UI and HTTPS ingress are live. AI operations are intentionally unavailable until a newly rotated CallMissed key is installed; real-provider and microphone verification remain pending.
 
 ![Vela home screen](docs/vela-home.png)
 
@@ -135,11 +135,11 @@ The browser test suite covers chat streaming, image output, and microphone denia
 ### Cloudflare Workers
 
 1. Authenticate with `wrangler login` or set a scoped `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
-2. From `edge/`, run `npx wrangler secret put CALLMISSED_API_KEY` and enter the **newly rotated** key. Do not paste it into a file, terminal command argument, issue, or commit.
+2. From `edge/`, run `npx wrangler secret put CALLMISSED_API_KEY` and enter the **newly rotated** key. The Worker already exists, so Wrangler can store it directly. Do not paste it into a file, terminal command argument, issue, or commit. For a fresh account, the first deployment requires `wrangler deploy --secrets-file` with a private temporary file; remove that file immediately afterward.
 3. Build the frontend with `cd web && npm ci && npm run build`.
 4. Run `cd edge && npm ci && npm run typecheck && npm test && npx wrangler deploy`.
 5. Verify the assigned `*.workers.dev` HTTPS URL using the checklist below. Bind a custom domain in Cloudflare if desired.
-6. For CD, configure GitHub production environment secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, and variable `PUBLIC_APP_URL`. The `Deploy Cloudflare` workflow runs after CI succeeds on `main`, or manually. Keep the provider secret in Cloudflare, outside GitHub Actions.
+6. For CD, configure GitHub production environment secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, and variable `PUBLIC_APP_URL`. Set the repository variable `DEPLOY_ENABLED=true` after those values and the CallMissed secret are ready. The `Deploy Cloudflare` workflow then runs after CI succeeds on `main`, or manually. Keep the provider secret in Cloudflare, outside GitHub Actions.
 
 Cloudflare static assets and Worker API share a hostname; Cloudflare terminates TLS. The Durable Object migration in `wrangler.jsonc` is SQLite-backed and compatible with the Workers Free plan. The Worker needs a key secret before it is ready.
 
