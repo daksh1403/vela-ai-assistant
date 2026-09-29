@@ -14,11 +14,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: pip
-          cache-dependency-path: api/pyproject.toml
-      - run: python -m pip install -e '.[dev]'
+      - run: python -m pip install uv==0.9.15
+      - run: uv sync --frozen --extra dev
         working-directory: api
-      - run: ruff check . && ruff format --check . && mypy app && pytest -q --disable-warnings
+      - run: uv run --frozen ruff check . && uv run --frozen ruff format --check . && uv run --frozen mypy app && uv run --frozen python -m pytest -q --disable-warnings
         working-directory: api
   frontend:
     runs-on: ubuntu-latest

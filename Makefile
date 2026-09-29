@@ -11,7 +11,7 @@ dev-web:
 	cd web && npm run dev
 
 test:
-	cd api && .venv/bin/pytest -q
+	cd api && .venv/bin/python -m pytest -q
 	cd web && npm test
 	cd edge && npm test
 
