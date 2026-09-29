@@ -158,7 +158,7 @@ Caddy obtains and renews a Let's Encrypt certificate, redirects HTTP to HTTPS, s
 
 - [x] HTTPS, security headers, and responsive UI checked at the live URL (Cloudflare hostname is HTTPS only)
 - [x] Live chat answer, multi-turn history, and streaming observed with a new key
-- [x] Live image generation returned valid JPEG bytes; browser image rendering covered by the browser smoke test
+- [x] Live image generation returned valid JPEG bytes and rendered at 1024 px in the production browser
 - [x] Voice session created and ended through the API; headless Chromium connected with a test microphone, attached a remote audio track, and cleaned it up on end
 - [ ] Human microphone input and audible agent response confirmed on a real device
 - [x] A transcript event appeared in the live browser session
