@@ -1,0 +1,18 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "vela-assistant",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-09-29",
+  "assets": {
+    "directory": "../web/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "RATE_GATE", "class_name": "RateGate" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RateGate"] }],
+  "secrets": { "required": ["CALLMISSED_API_KEY"] },
+  "observability": { "enabled": true }
+}

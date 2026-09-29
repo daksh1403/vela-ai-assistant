@@ -1,0 +1,37 @@
+:8080 {
+    encode zstd gzip
+    log {
+        output stdout
+        format json
+    }
+    request_body {
+        max_size 1MB
+    }
+    header {
+        X-Content-Type-Options nosniff
+        Referrer-Policy strict-origin-when-cross-origin
+        X-Frame-Options DENY
+        Permissions-Policy "microphone=(self), camera=()"
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; media-src 'self' blob:; connect-src 'self' wss: https:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+    }
+    handle /internal/* {
+        respond 404
+    }
+    handle /api/* {
+        reverse_proxy api:8000 {
+            header_up X-Forwarded-For {remote_host}
+            flush_interval -1
+            transport http {
+                read_timeout 180s
+                write_timeout 180s
+            }
+        }
+    }
+    handle {
+        root * /srv
+        try_files {path} /index.html
+        file_server
+    }
+    @assets path /assets/*
+    header @assets Cache-Control "public, max-age=31536000, immutable"
+}

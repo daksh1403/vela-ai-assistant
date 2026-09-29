@@ -1,0 +1,15 @@
+{
+  "uid": "vela-overview",
+  "title": "Vela · Service overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "time": {"from": "now-1h", "to": "now"},
+  "panels": [
+    {"id":1,"title":"Request throughput","type":"timeseries","gridPos":{"x":0,"y":0,"w":12,"h":8},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum by (route) (rate(vela_http_requests_total[5m]))","legendFormat":"{{route}}"}]},
+    {"id":2,"title":"HTTP errors","type":"timeseries","gridPos":{"x":12,"y":0,"w":12,"h":8},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum by (status) (rate(vela_http_requests_total{status=~\"4..|5..\"}[5m]))","legendFormat":"{{status}}"}]},
+    {"id":3,"title":"HTTP p95 latency","type":"timeseries","gridPos":{"x":0,"y":8,"w":12,"h":8},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"histogram_quantile(0.95, sum by (le,route) (rate(vela_http_request_duration_seconds_bucket[5m])))","legendFormat":"{{route}}"}]},
+    {"id":4,"title":"AI operation latency p95","type":"timeseries","gridPos":{"x":12,"y":8,"w":12,"h":8},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"histogram_quantile(0.95, sum by (le,operation) (rate(vela_ai_request_duration_seconds_bucket[5m])))","legendFormat":"{{operation}}"}]},
+    {"id":5,"title":"Provider failures","type":"timeseries","gridPos":{"x":0,"y":16,"w":24,"h":8},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum by (operation,result) (rate(vela_ai_requests_total{result!=\"success\"}[5m]))","legendFormat":"{{operation}} · {{result}}"}]}
+  ]
+}

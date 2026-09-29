@@ -1,0 +1,30 @@
+services:
+  api:
+    build: ./api
+    env_file: .env
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:-http://localhost:8080}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8080}
+    expose: ["8000"]
+    restart: unless-stopped
+    init: true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/live', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    ports: ["8080:8080"]
+    depends_on:
+      api: { condition: service_healthy }
+    restart: unless-stopped
+    init: true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
