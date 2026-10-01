@@ -122,7 +122,9 @@ Grafana is bound to `127.0.0.1:3000` and provisions `infra/grafana/dashboards/ve
 ```bash
 make test          # Backend and frontend tests
 make lint          # Ruff, mypy, ESLint, TypeScript
-make build         # Frontend production build
+make build         # Cached frontend + edge build in parallel
+make build-force   # Rebuild both outputs
+make build-check   # Build + Cloudflare packaging validation
 make compose-check # Compose validation
 ```
 

@@ -17,3 +17,5 @@ coverage/
 **/.wrangler-dry/
 *.tsbuildinfo
 **/.uv-cache/
+
+.cache/

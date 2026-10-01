@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Mic, MicOff, PhoneOff, RotateCcw, Sparkles, MessageSquareText } from 'lucide-react'
-import { Room, RoomEvent, Track } from 'livekit-client'
+import type { Room } from 'livekit-client'
 import { apiFetch, errorMessage } from './api'
 import Orb from './Orb'
 
@@ -59,6 +59,8 @@ export default function VoicePage({ active }: { active: boolean }) {
       probe = null
       if (generation !== generationRef.current) return
       setState('creating')
+      const { Room, RoomEvent, Track } = await import('livekit-client')
+      if (generation !== generationRef.current) return
       const session = await apiFetch<VoiceSession>('/voice/sessions', {})
       if (generation !== generationRef.current) {
         void apiFetch<void>(`/voice/sessions/${session.id}/end`, { end_token: session.end_token }).catch(() => {})
