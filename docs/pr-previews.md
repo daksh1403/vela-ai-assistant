@@ -1,12 +1,14 @@
 # Pull request previews
 
-Every same-repository PR gets a stable Cloudflare review URL:
+With the repository credentials configured, the preview workflow gives each
+same-repository PR a stable Cloudflare review URL:
 `https://pr-<number>-vela-preview.dakshx.workers.dev`.
 
 The **PR Preview** workflow checks out the exact PR head, builds the frontend,
 installs Wrangler, and uploads a version to the dedicated `vela-preview` Worker,
 probes it, and updates one bot comment with the URL and commit SHA. GitHub also
-shows the preview as a deployment. New commits update the same URL. The separate CI workflow runs all tests and static/security checks. Production
+shows the preview as a deployment. New commits update the same URL. The separate CI workflow runs tests and static/security checks.
+Production
 `vela-assistant` is not deployed by this workflow. Fork PRs do not receive credentials.
 
 ## One-time setup
