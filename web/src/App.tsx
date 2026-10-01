@@ -23,7 +23,7 @@ export default function App() {
   const [online, setOnline] = useState(navigator.onLine)
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? 'dark' : 'light'
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#101014' : '#f5f4f9')
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#171717' : '#fafafa')
     try { window.localStorage?.setItem('vela-theme', dark ? 'dark' : 'light') } catch { /* Appearance stays in memory. */ }
   }, [dark])
   useEffect(() => {

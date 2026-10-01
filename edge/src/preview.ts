@@ -6,7 +6,7 @@ function json(body: unknown, status = 200) { return Response.json(body, { status
 export default {
   async fetch(request: Request, env: PreviewEnv): Promise<Response> {
     const path = new URL(request.url).pathname
-    if (path === '/__preview.css') return new Response('.vela-preview-banner{position:sticky;top:0;z-index:100;padding:9px 18px;text-align:center;background:#322847;color:#e7dbff;font:11px/1.6 system-ui,sans-serif;border-bottom:1px solid #635180} @media(max-width:600px){.vela-preview-banner{font-size:9px;padding:7px 13px}}', { headers: { ...headers, 'Content-Type': 'text/css' } })
+    if (path === '/__preview.css') return new Response('.vela-preview-banner{position:sticky;top:0;z-index:100;padding:9px 18px;text-align:center;background:#202020;color:#f5f5f5;font:11px/1.6 system-ui,sans-serif;border-bottom:1px solid #383838} @media(max-width:600px){.vela-preview-banner{font-size:9px;padding:7px 13px}}', { headers: { ...headers, 'Content-Type': 'text/css' } })
     if (path === '/api/v1/health/live' || path === '/api/v1/health/ready') return json({ status: 'ok', environment: 'preview', demo: true })
     if (path.startsWith('/api/')) {
       if (request.method !== 'POST') return json({ error: { code: 'METHOD_NOT_ALLOWED', message: 'This preview route expects POST.' } }, 405)
