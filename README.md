@@ -1,173 +1,134 @@
 # Vela
 
-**One assistant. Three ways to explore.** Vela brings text chat, image creation, and live voice into one focused workspace. It is designed as a secure AI product and a reviewable platform exercise: the permanent CallMissed key stays behind the API, every paid operation is bounded, and each request can be traced by ID.
+An AI workspace for streaming chat, image generation, and live voice conversations.
+Built with React, TypeScript, and Cloudflare Workers, with an alternative FastAPI deployment.
 
-> **Live deployment:** [vela-assistant.dakshx.workers.dev](https://vela-assistant.dakshx.workers.dev). HTTPS, chat, image generation, and browser voice connection were verified against CallMissed on 29 September 2026. A human microphone and speaker check remains pending.
+**[Open Vela](https://vela-assistant.dakshx.workers.dev)** · **[Review the UI preview](https://pr-3-vela-preview.dakshx.workers.dev)**
 
-![Vela home screen](docs/vela-home.png)
+![Vela desktop workspace in the lilac-and-peach theme](docs/vela-home.png)
 
-[Mobile view](docs/vela-mobile.png)
+<details>
+<summary>Mobile screenshot</summary>
 
-## Try it locally
+![Vela mobile workspace](docs/vela-mobile.png)
+
+</details>
+
+## Features
+
+| Feature | Behavior |
+| --- | --- |
+| Chat | Multi-turn streaming, Markdown, code copying, retry, and new conversations |
+| Images | Prompt suggestions, generation, preview, regeneration, and download |
+| Voice | LiveKit audio, microphone permission checks, connection states, and transcripts |
+| Appearance | Lilac-and-peach dark and light modes with responsive navigation |
+| Privacy | Provider credentials stay on the backend; conversations remain in browser memory |
+
+The review preview uses demo chat and image responses. Live voice sessions require the production site.
+
+## Quick start
+
+### Docker
+
+Requires Docker with Compose.
 
 ```bash
 cp .env.example .env
-# Edit .env: replace CALLMISSED_API_KEY with a newly rotated scoped key.
+# Set CALLMISSED_API_KEY in .env.
 docker compose up --build
 ```
 
-Open **http://localhost:8080**. Docker Compose starts only the API and public Caddy server. The placeholder key lets the UI load, but AI calls require a valid key. For direct development, use `make setup`, then `make dev-api` and `make dev-web` in separate terminals. API docs are available at `http://localhost:8000/docs` in development.
+Open **http://localhost:8080**. The interface loads with the placeholder key;
+AI requests need a valid CallMissed key with `llm`, `image`, `stt`, and `tts` permissions.
 
-The key needs CallMissed `llm`, `image`, `stt`, and `tts` permissions. Set a per-key budget in the CallMissed console. Voice on a deployed site needs HTTPS, a supported browser, a microphone, and permission to use it.
+### Local development
 
-## Architecture
+Requires Node.js 22, npm, Python 3.12–3.14, and Make.
 
-```mermaid
-flowchart LR
-  B[Browser · React] -->|same-origin API| I{Ingress}
-  I -->|Docker| C[Caddy · HTTPS]
-  I -->|Cloudflare| W[Worker · HTTPS]
-  C --> P[FastAPI]
-  W --> D[Durable Object rate gate]
-  P --> CM[CallMissed API]
-  W --> CM
-  CM -->|temporary URL + JWT| P
-  CM -->|temporary URL + JWT| W
-  B -->|WebRTC with temporary JWT| LK[LiveKit voice room]
-  P --> M[Prometheus → Grafana]
-  W --> O[Cloudflare observability]
+```bash
+cp .env.example .env
+make setup
 ```
 
-The default production target is **Cloudflare Workers with static assets**, which gives HTTPS and a same-origin API on a low-cost host. The **Docker Compose deployment** is an independent, production-style container path using FastAPI and Caddy, suitable for EC2 or a VM. Both backends implement the same `/api/v1` contract and are tested against mocked CallMissed responses. The two provider adapters are a deliberate deployment trade-off; parity tests and a shared contract should be expanded if both targets remain long term.
+Run these commands in separate terminals:
 
-### Chat request
-
-```mermaid
-sequenceDiagram
-  participant Browser
-  participant API as Vela API
-  participant CM as CallMissed
-  Browser->>API: POST /api/v1/chat/stream · conversation history
-  API->>API: Validate input, apply rate limit, assign request ID
-  API->>CM: POST /v1/chat/completions · Bearer secret · stream=true
-  CM-->>API: SSE deltas
-  API-->>Browser: NDJSON deltas
-  Browser->>Browser: Render Markdown progressively
+```bash
+make dev-api
 ```
 
-### Voice session
-
-```mermaid
-sequenceDiagram
-  participant Browser
-  participant API as Vela API
-  participant CM as CallMissed
-  participant LK as LiveKit room
-  Browser->>Browser: Request microphone permission
-  Browser->>API: POST /api/v1/voice/sessions
-  API->>CM: POST /v1/voice/sessions · Bearer secret
-  CM-->>API: session id, ws_url, temporary JWT
-  API-->>Browser: temporary URL/JWT + signed end token
-  Browser->>LK: Connect with LiveKit client
-  Browser<<->>LK: Microphone audio, agent audio, transcript events
-  Browser->>API: POST /sessions/{id}/end · signed token
-  API->>CM: DELETE /v1/voice/sessions/{id}
+```bash
+make dev-web
 ```
 
-## Product behavior
+Open **http://localhost:5173**. Development API documentation is at
+**http://localhost:8000/docs**. Deployed voice calls require HTTPS and microphone permission.
 
-- **Chat:** streaming multi-turn responses, Markdown with code copy, retry, new conversation, keyboard controls, natural scroll, and interruption handling. Messages remain in React memory. The only browser storage is the appearance preference.
-- **Images:** one image per request, bounded prompt length, explicit generating state, preview, regenerate, and download. Image bytes are returned by the API and kept only in browser memory.
-- **Voice:** server-created temporary LiveKit credential; microphone preflight before paid session creation; connection, listening, thinking, speaking, reconnecting, and error states; transcript lines only from LiveKit events; audio cleanup and remote session deletion on end. The server caps sessions at five minutes by default.
+## Build and checks
 
-CallMissed's [chat](https://docs.callmissed.com/docs/chat-completion), [image](https://docs.callmissed.com/docs/image-generation), and [voice session](https://docs.callmissed.com/docs/voice-sessions-api) contracts drive the integration. Defaults are `sarvam-105b-conversations`, `sdxl-lightning`, and the CallMissed voice stack with `shubh` and `en-IN`. Override model and voice settings through server configuration, not browser controls.
+Run commands from the repository root.
 
-## API
-
-| Route | Purpose |
+| Command | Purpose |
 | --- | --- |
-| `GET /api/v1/health/live` | Process liveness, no provider dependency |
-| `GET /api/v1/health/ready` | Configuration readiness |
-| `POST /api/v1/chat` | Complete chat response |
-| `POST /api/v1/chat/stream` | NDJSON chat stream |
-| `POST /api/v1/images` | One base64 image |
-| `POST /api/v1/voice/sessions` | Create temporary voice credentials |
-| `POST /api/v1/voice/sessions/{id}/end` | End the remote session |
-| `POST /api/v1/voice/sessions/{id}/transcript` | Fetch recorded turns |
+| `make build` | Install missing dependencies and build frontend and edge outputs in parallel |
+| `make build-force` | Rebuild using installed dependencies |
+| `make build-check` | Build and validate Cloudflare packaging |
+| `make test` | Run backend, frontend, and edge tests |
+| `make lint` | Run Python lint/types, ESLint, and TypeScript checks |
+| `make compose-check` | Validate Docker Compose configuration |
+| `make deploy-cloudflare` | Build, validate, and deploy the production Worker |
 
-Requests have bounded bodies and typed validation. Failures use `{ "error": { "code", "message", "request_id" } }`. User-facing messages never include raw provider errors. The request ID is also returned in `X-Request-ID`.
+Unchanged local builds reuse verified output. Markdown and LiveKit load when needed,
+and fonts are served locally. See [build details](docs/build.md).
 
-## Security and privacy
+## Deploy to Cloudflare
 
-- `CALLMISSED_API_KEY` is read only by a backend runtime. The browser receives a temporarily issued voice JWT and URL, never the permanent key. Cloudflare uses an encrypted Worker secret; Docker injects `.env` at runtime. `.env`, `.dev.vars`, dependencies, and builds are ignored by Git and Docker contexts.
-- Production FastAPI rejects a missing/placeholder key, HTTP public URL, wildcard/localhost CORS, or non-HTTPS provider URL. Cloudflare uses same-origin requests and issues no cross-origin allowance.
-- Input caps: 30 chat turns, 8,000 characters per message, 30,000 total characters, 2,000 image-prompt characters, one image per request, and a five-minute voice session. Rate limits protect chat, image, and voice creation. Docker uses one-process sliding windows; Cloudflare uses a per-client Durable Object for cross-isolate limits.
-- The provider client bounds concurrency and timeouts. It does **not** automatically retry paid image generations or session creation. A client retry is explicit, avoiding surprise duplicate charges.
-- Caddy and Cloudflare static assets set CSP, frame protection, MIME protection, referrer and microphone policies. Caddy adds HSTS on HTTPS deployments. CSP permits dynamic `wss:` endpoints because LiveKit's room URL is issued per session.
-- Logs record status, route, latency, operation, and request ID. Prompts, transcripts, audio, Authorization headers, and secret values are excluded. The UI stores only the theme preference locally.
-- The app has no accounts or database: the assignment does not require durable identity, and avoiding persistence reduces privacy and operations burden. A public deployment needs a provider budget cap and should be treated as a cost-bearing service.
-
-## Observability
-
-FastAPI exposes Prometheus data at `/internal/metrics` on the internal Compose network; Caddy returns 404 for `/internal/*`. Metrics include route and status counts, HTTP latency, provider operation counts, failure category, and operation latency. Labels exclude prompts, request IDs, session IDs, and IP addresses. Optional monitoring:
+The production Worker is **`vela-assistant`** and serves both the UI and the API.
+Its configuration is [edge/wrangler.jsonc](edge/wrangler.jsonc).
 
 ```bash
-GRAFANA_ADMIN_PASSWORD='choose-a-strong-password' docker compose -f compose.yaml -f compose.monitoring.yaml up --build -d
+make build-check
+cd edge
+npx wrangler login
+# First-time setup only: enter the provider key at Wrangler's private prompt.
+npx wrangler secret put CALLMISSED_API_KEY
+cd ..
+make deploy-cloudflare
 ```
 
-Grafana is bound to `127.0.0.1:3000` and provisions `infra/grafana/dashboards/vela.json`. On Cloudflare, Workers Observability records structured request events; Durable Objects enforce distributed rate limits. Cloudflare's dashboard provides edge request and error charts. The container dashboard does not automatically aggregate Cloudflare metrics.
-
-## Quality gates
+Existing deployments retain their stored secret. Verify deployment with:
 
 ```bash
-make test          # Backend and frontend tests
-make lint          # Ruff, mypy, ESLint, TypeScript
-make build         # Cached frontend + edge build in parallel
-make build-force   # Rebuild both outputs
-make build-check   # Build + Cloudflare packaging validation
-make compose-check # Compose validation
+curl -fsS https://vela-assistant.dakshx.workers.dev/api/v1/health/ready
 ```
 
-`edge/` has its own `npm test`, `npm run typecheck`, `npm run build`, and `npm run dry-run`. Tests mock the provider and never spend API credits. GitHub Actions runs all tests, static analysis, production builds, Docker Compose smoke checks, secret scanning, and filesystem vulnerability scanning. Production dependency audits run for both JavaScript packages.
+For dashboard build commands, GitHub automation, or Docker hosting, see
+[the deployment guide](docs/deployment.md). Review URLs use a separate demo Worker;
+merging a PR changes only its target branch. Production builds must use the branch
+that contains the desired changes.
 
-The browser test suite covers chat streaming, image output, and microphone denial. An optional Playwright smoke (`python scripts/browser_smoke.py http://localhost:5173`) checks real desktop/mobile navigation against clearly mocked API responses. Real WebRTC, real CallMissed output, and browser audio playback require a valid key and manual device testing; the CI suite does not pretend to verify them.
+## Repository layout
 
-## Deployment
-
-### Cloudflare Workers
-
-1. Authenticate with `wrangler login` or set a scoped `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
-2. From `edge/`, run `npx wrangler secret put CALLMISSED_API_KEY` and enter the **newly rotated** key. The Worker already exists, so Wrangler can store it directly. Do not paste it into a file, terminal command argument, issue, or commit. For a fresh account, the first deployment requires `wrangler deploy --secrets-file` with a private temporary file; remove that file immediately afterward.
-3. Build the frontend with `cd web && npm ci && npm run build`.
-4. Run `cd edge && npm ci && npm run typecheck && npm test && npx wrangler deploy`.
-5. Verify the assigned `*.workers.dev` HTTPS URL using the checklist below. Bind a custom domain in Cloudflare if desired.
-6. For CD, configure GitHub production environment secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, and variable `PUBLIC_APP_URL`. Set the repository variable `DEPLOY_ENABLED=true` after those values and the CallMissed secret are ready. The `Deploy Cloudflare` workflow then runs after CI succeeds on `main`, or manually. Keep the provider secret in Cloudflare, outside GitHub Actions.
-
-Cloudflare static assets and Worker API share a hostname; Cloudflare terminates TLS. The Durable Object migration in `wrangler.jsonc` is SQLite-backed and compatible with the Workers Free plan. The Worker returns readiness 503 if the key secret is missing or still a placeholder.
-
-### Docker on EC2 or a VM
-
-Set DNS to the host, allow only inbound 80/443, install Docker Compose, keep SSH restricted, and set `APP_DOMAIN`, `ACME_EMAIL`, `PUBLIC_APP_URL=https://your-domain`, `ALLOWED_ORIGINS=https://your-domain`, and `APP_ENV=production` in the server's private `.env`. Then run:
-
-```bash
-docker compose -f compose.yaml -f compose.prod.yaml up --build -d
-curl -fsS https://your-domain/api/v1/health/ready
+```text
+web/       React interface and browser tests
+edge/      Cloudflare Worker, Node adapter, and edge tests
+api/       FastAPI backend and tests
+infra/     Caddy, Prometheus, and Grafana configuration
+scripts/   Build and browser verification utilities
+docs/      Setup, deployment, architecture, and design guides
 ```
 
-Caddy obtains and renews a Let's Encrypt certificate, redirects HTTP to HTTPS, serves static assets, and proxies the API. Only Caddy publishes ports. Deploying updates with `up --build -d` can cause brief downtime; zero downtime and automatic rollback are not claimed. Keep `.env` readable only by the operator account, back it up securely, and rotate the provider key if exposure is suspected.
+## Documentation
 
-## Production verification checklist
+- [Deployment guide](docs/deployment.md): production, dashboard builds, GitHub CD, and Docker hosting.
+- [Build guide](docs/build.md): caching, CI commands, and loading optimizations.
+- [PR previews](docs/pr-previews.md): setup, review URLs, and demo behavior.
+- [Architecture and API](docs/architecture.md): request flows, routes, security, and monitoring.
+- [UI design](docs/ui-design.md): workspace layout, visual direction, and references.
 
-- [x] HTTPS, security headers, and responsive UI checked at the live URL (Cloudflare hostname is HTTPS only)
-- [x] Live chat answer, multi-turn history, and streaming observed with a new key
-- [x] Live image generation returned valid JPEG bytes and rendered at 1024 px in the production browser
-- [x] Voice session created and ended through the API; headless Chromium connected with a test microphone, attached a remote audio track, and cleaned it up on end
-- [ ] Human microphone input and audible agent response confirmed on a real device
-- [x] A transcript event appeared in the live browser session
-- [x] Browser requests and built JavaScript inspected for permanent key exposure
-- [ ] 429, 5xx, slow provider, offline browser, invalid input, microphone denial, disconnect, duplicate click, and restart behavior checked
-- [ ] Request IDs found in responses and structured logs; rate limits and operational charts checked
+## Verification
 
-## Engineering trade-offs
-
-The project deliberately avoids a database, login flow, queue, and automatic retries for paid operations. The Cloudflare and FastAPI adapters duplicate a small amount of provider mapping to support both serverless and container deployment; their request/response contract and failure tests are kept aligned. For a long-lived product, consolidate on one target or extract a shared contract test suite. Next improvements would be authenticated user budgets, a durable conversation store with retention controls, provider webhook validation for voice completion, and a real-device WebRTC browser test in a dedicated environment.
+Automated tests use mocked provider responses and do not spend API credits.
+Browser checks cover navigation, chat streaming, image display/download, and dark/light
+appearances on desktop and mobile. Production deployment checks cover the deployed UI
+and health endpoints. Real microphone input and audible agent responses still need a
+human device check; automated UI checks do not establish voice audio quality.
