@@ -1,8 +1,9 @@
 import { FormEvent, ReactNode, useEffect, useRef, useState } from 'react'
-import { ArrowUp, Copy, MessageSquareText, Plus, RotateCcw, Sparkles } from 'lucide-react'
+import { ArrowUp, Copy, Lightbulb, PenLine, Plus, RotateCcw, Sparkles, Telescope } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { ChatMessage, errorMessage, streamChat } from './api'
+import Orb from './Orb'
 
 function CodeBlock({ children }: { children: ReactNode }) {
   const codeRef = useRef<HTMLPreElement>(null)
@@ -17,9 +18,9 @@ function Markdown({ children }: { children: string }) {
   }}>{children}</ReactMarkdown>
 }
 
-export default function ChatPage() {
+export default function ChatPage({ initialDraft = '' }: { initialDraft?: string }) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [draft, setDraft] = useState('')
+  const [draft, setDraft] = useState(initialDraft)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const abortRef = useRef<AbortController | null>(null)
@@ -72,11 +73,11 @@ export default function ChatPage() {
     void send(lastUser.content, history)
   }
   return <section className="workspace chat-workspace">
-    <div className="page-heading"><div><span className="eyebrow">THE CONVERSATION</span><h2>Chat with Vela</h2><p>Follow a thought wherever it goes.</p></div><button className="quiet-button" onClick={reset}><Plus size={17}/> New conversation</button></div>
+    <div className="page-heading"><div><span className="eyebrow">A LITTLE ROOM TO THINK</span><h2>Chat with Vela</h2><p>Your ideas deserve a good conversation.</p></div><button className="quiet-button" onClick={reset}><Plus size={17}/> New conversation</button></div>
     <div className="chat-panel" ref={scrollRef} onScroll={event => { const el = event.currentTarget; shouldStickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120 }} aria-live="polite">
-      {messages.length === 0 ? <div className="chat-empty"><span className="empty-symbol"><MessageSquareText size={29}/></span><h3>A good question starts here.</h3><p>Ask for an explanation, a fresh perspective, or help shaping an idea.</p><div className="suggestions">{['Explain a complex idea simply', 'Help me draft a thoughtful email', 'Brainstorm a weekend project'].map(suggestion => <button key={suggestion} onClick={() => void send(suggestion)}>{suggestion}<ArrowUp size={14}/></button>)}</div></div> : <div className="message-list">{messages.map((message, index) => <div className={`message-row ${message.role}`} key={index}><div className="message-avatar">{message.role === 'assistant' ? <Sparkles size={15}/> : 'Y'}</div><div className="message-body"><span className="message-name">{message.role === 'assistant' ? 'Vela' : 'You'}</span>{message.content ? <div className="markdown"><Markdown>{message.content}</Markdown></div> : <div className="typing"><span/><span/><span/></div>}</div></div>)}</div>}
+      {messages.length === 0 ? <div className="chat-empty"><Orb className="chat-orb"/><span className="eyebrow">LET’S FOLLOW THAT THOUGHT</span><h3>What’s on your mind?</h3><p>A big question, a half-formed idea, a blank page.<br/>We can start anywhere.</p><div className="suggestions">{[{ title: 'Make it make sense', prompt: 'Explain a complex idea simply', icon: Telescope }, { title: 'Find the right words', prompt: 'Help me draft a thoughtful email', icon: PenLine }, { title: 'Try something new', prompt: 'Brainstorm a weekend project', icon: Lightbulb }].map(({ title, prompt, icon: Icon }) => <button key={title} onClick={() => setDraft(prompt)}><Icon size={18}/><span>{title}<small>{prompt}</small></span><ArrowUp size={14}/></button>)}</div></div> : <div className="message-list">{messages.map((message, index) => <div className={`message-row ${message.role}`} key={index}><div className="message-avatar">{message.role === 'assistant' ? <Sparkles size={15}/> : 'Y'}</div><div className="message-body"><span className="message-name">{message.role === 'assistant' ? 'Vela' : 'You'}</span>{message.content ? <div className="markdown"><Markdown>{message.content}</Markdown></div> : <div className="typing"><span/><span/><span/></div>}</div></div>)}</div>}
     </div>
     {error && <div className="inline-error" role="alert"><span>{error}</span><button onClick={retry} disabled={loading}><RotateCcw size={15}/> Retry</button></div>}
-    <form className="composer" onSubmit={submit}><label htmlFor="chat-input" className="sr-only">Message Vela</label><textarea id="chat-input" value={draft} onChange={event => setDraft(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); if (draft.trim()) void send(draft) } }} maxLength={8000} rows={2} placeholder="Ask Vela anything..." disabled={loading}/><button type="submit" className="send-button" disabled={!draft.trim() || loading} aria-label="Send message"><ArrowUp size={19}/></button><div className="composer-hint">{loading ? 'Vela is writing…' : 'Enter to send · Shift+Enter for a new line'}</div></form>
+    <form className="composer" onSubmit={submit}><label htmlFor="chat-input" className="sr-only">Message Vela</label><textarea id="chat-input" value={draft} onChange={event => setDraft(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); if (draft.trim()) void send(draft) } }} maxLength={8000} rows={2} placeholder="Ask Vela anything..." disabled={loading}/><button type="submit" className="send-button" disabled={!draft.trim() || loading} aria-label="Send message"><ArrowUp size={19}/></button><div className="composer-bottom"><span className="composer-identity"><Sparkles size={12}/> Vela</span><div className="composer-hint">{loading ? 'Vela is writing…' : 'Enter to send · Shift+Enter for a new line'}</div></div></form><p className="workspace-footnote">A fresh perspective helps. Double-check important details.</p>
   </section>
 }

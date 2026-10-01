@@ -34,6 +34,23 @@ describe('product flows', () => {
     await waitFor(() => expect(screen.getByAltText(/generated image: a blue vase/i)).toBeInTheDocument())
   })
 
+  it('carries an overview prompt into chat without making a paid request', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.type(screen.getByLabelText('Your starting idea'), 'Help me plan a new project')
+    await user.click(screen.getByRole('button', { name: 'Continue in chat' }))
+    expect(await screen.findByLabelText('Message Vela')).toHaveValue('Help me plan a new project')
+    expect(vi.mocked(fetch)).not.toHaveBeenCalled()
+  })
+
+  it('carries an inspiration prompt into the image studio', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: 'Try prompt: Otherworldly landscapes' }))
+    expect((await screen.findByLabelText('Your idea') as HTMLTextAreaElement).value).toContain('alpine landscape')
+    expect(vi.mocked(fetch)).not.toHaveBeenCalled()
+  })
+
   it('shows a useful microphone permission error', async () => {
     const user = userEvent.setup()
     Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: { getUserMedia: vi.fn().mockRejectedValue(Object.assign(new Error('denied'), { name: 'NotAllowedError' })) } })
