@@ -6,8 +6,12 @@
 
 Cloudflare Workers Builds is connected directly to this GitHub repository. Cloudflare
 uses its own build token; no Cloudflare token is required in GitHub Actions.
-GitHub Actions runs CI only. The former `PR Preview` and `Deploy Cloudflare` workflows
+GitHub Actions runs CI and publishes verified Cloudflare preview links. The former `PR Preview` and `Deploy Cloudflare` workflows
 have been removed to avoid duplicate deployment pipelines and failed environment records.
+The `Cloudflare preview status` workflow listens for successful Cloudflare checks,
+verifies the demo health endpoint, and publishes one PR comment and a deployment
+record. It uses GitHub’s built-in token and performs no Cloudflare deployment.
+Closed or superseded PR heads are skipped; closing a PR makes its records inactive.
 
 ## Connected Worker
 
@@ -34,7 +38,10 @@ using the installed binary avoids an extra Wrangler download.
 1. Open or update a same-repository pull request.
 2. Open its **Workers Builds: vela-ai-assistant** check.
 3. Wait for Cloudflare's build to succeed.
-4. Open the Preview URL shown in the Cloudflare build output.
+4. Open the link in the **Vela preview** bot comment or the Preview URL in the Cloudflare build output.
+
+If publication needs retrying, manually run **Cloudflare preview status** with the
+Cloudflare check run ID. Deployment is not repeated.
 
 Use the URL returned by Cloudflare rather than guessing a URL from a branch name.
 Deployment success is separate from passing tests; inspect the **CI** checks too.

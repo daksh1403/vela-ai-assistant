@@ -70,7 +70,8 @@ Build script caching cannot reduce that initialization stage.
 ## Direct GitHub integration
 
 Cloudflare is connected directly to the repository and manages its own build token.
-GitHub Actions runs CI; no Cloudflare GitHub Actions secret is required. The connected
+GitHub Actions runs CI and publishes verified preview links using its built-in token;
+no Cloudflare GitHub Actions secret is required. The connected
 `vela-ai-assistant` Worker uses the root demo configuration for branch previews.
 
 The separate production Worker `vela-assistant` uses `edge/wrangler.jsonc`. To enable

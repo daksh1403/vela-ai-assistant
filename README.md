@@ -102,7 +102,7 @@ curl -fsS https://vela-assistant.dakshx.workers.dev/api/v1/health/ready
 ```
 
 Cloudflare builds previews through its direct GitHub connection; GitHub Actions
-runs CI without Cloudflare credentials. For dashboard commands or Docker hosting, see
+runs CI and publishes verified preview links without Cloudflare credentials. For dashboard commands or Docker hosting, see
 [the deployment guide](docs/deployment.md). Review URLs use a separate demo Worker;
 merging a PR changes only its target branch. Production builds must use the branch
 that contains the desired changes.
