@@ -139,4 +139,3 @@ export default function VoicePage({ active }: { active: boolean }) {
     {error && <div className="inline-error" role="alert"><span>{error}</span>{state !== 'disconnected' && <button onClick={() => void start()}><RotateCcw size={15}/> Retry</button>}</div>}
   </section>
 }
-
