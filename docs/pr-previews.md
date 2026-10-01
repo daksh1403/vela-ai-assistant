@@ -1,54 +1,79 @@
 # Pull request previews
 
-With the repository credentials configured, the preview workflow gives each
-same-repository PR a stable Cloudflare review URL:
-`https://pr-<number>-vela-preview.dakshx.workers.dev`.
+[Back to README](../README.md) · [Deployment guide](deployment.md)
 
-The **PR Preview** workflow checks out the exact PR head, builds the frontend,
-installs Wrangler, and uploads a version to the dedicated `vela-preview` Worker,
-probes it, and updates one bot comment with the URL and commit SHA. GitHub also
-shows the preview as a deployment. New commits update the same URL. The separate CI workflow runs tests and static/security checks.
-Production
-`vela-assistant` is not deployed by this workflow. Fork PRs do not receive credentials.
+## How deployment works
 
-## One-time setup
+Cloudflare Workers Builds is connected directly to this GitHub repository. Cloudflare
+uses its own build token; no Cloudflare token is required in GitHub Actions.
+GitHub Actions runs CI only. The former `PR Preview` and `Deploy Cloudflare` workflows
+have been removed to avoid duplicate deployment pipelines and failed environment records.
 
-1. Create the preview Worker from `edge/` after building `web/`:
-   `npx wrangler deploy --config wrangler.preview.jsonc`.
-2. Add repository secret `CLOUDFLARE_API_TOKEN`: a Cloudflare API token scoped to
-   the account with **Account / Workers Scripts / Edit** and **Account / Account Settings / Read**.
-   Use GitHub’s secret UI or `gh secret set CLOUDFLARE_API_TOKEN` and paste privately.
-   Do not use Wrangler’s expiring local OAuth credential in CI.
-3. Set repository variable `CLOUDFLARE_ACCOUNT_ID` to your Cloudflare account ID.
-4. Open or update a PR. Inspect the **PR Preview** action and its bot comment.
+## Connected Worker
 
-## Preview behavior
+The connected review Worker is **`vela-ai-assistant`**. The repository-root
+[Wrangler configuration](../wrangler.jsonc) defines a stateless demo entry point,
+compiled frontend assets, a custom build command, and the `previews` block required
+by `wrangler preview`.
 
-The preview Worker has no provider key, Durable Objects, or production bindings.
-It injects a visible preview notice into HTML. Chat returns a deterministic
-streamed Markdown answer. Images return a fixed sample photograph, enabling
-preview, regenerate, and download review without paid image generation. Voice
-shows its real interface and microphone permission states; session creation returns
-an explicit preview-only error. Production continues to use the real API.
+In the Cloudflare Worker build settings, use:
 
-Preview responses carry `X-Robots-Tag: noindex, nofollow`, `Cache-Control: no-store`,
-and `X-Vela-Preview: demo`. The preview notice is styled by a same-origin stylesheet
-so the existing CSP remains intact. The sample photograph is from
+| Setting | Value |
+| --- | --- |
+| Root directory | `/` |
+| Build command | `node scripts/build.mjs --ci --web-only` |
+| Deploy command | `edge/node_modules/.bin/wrangler preview --config wrangler.jsonc` |
+| Non-production branch deploy command | `edge/node_modules/.bin/wrangler preview --config wrangler.jsonc` |
+
+Enable non-production branch builds for the branches you want to review. The older
+`npx wrangler preview` command also finds this root config and runs its custom build;
+using the installed binary avoids an extra Wrangler download.
+
+## Review a pull request
+
+1. Open or update a same-repository pull request.
+2. Open its **Workers Builds: vela-ai-assistant** check.
+3. Wait for Cloudflare's build to succeed.
+4. Open the Preview URL shown in the Cloudflare build output.
+
+Use the URL returned by Cloudflare rather than guessing a URL from a branch name.
+Deployment success is separate from passing tests; inspect the **CI** checks too.
+Cloudflare environment initialization occurs before repository build commands run.
+
+## Demo behavior
+
+The demo Worker has no provider key or Durable Object bindings. A visible notice
+labels chat as a deterministic streamed response and images as a fixed sample.
+The voice interface can be reviewed, but creating a live voice session returns a
+preview-only error. Real API operations remain available on
+[production](https://vela-assistant.dakshx.workers.dev).
+
+Responses include `X-Vela-Preview: demo`, `Cache-Control: no-store`, and noindex headers.
+The notice uses a same-origin stylesheet. The sample photograph is from
 [Unsplash](https://images.unsplash.com/photo-1464822759023-fed622ff2c3b).
 
-On PR closure, GitHub deployments become inactive. Cloudflare version aliases
-remain available for review; Cloudflare retains the 1,000 most recent aliases.
-These are version aliases on a stateless review Worker, not isolated backend
-Previews. This keeps review deployment independent of production’s Durable Objects.
+## Manual preview
 
-For a manual preview:
+Authenticate locally with Wrangler, then run from the repository root:
 
 ```bash
-cd web
-npm ci && npm run build
-cd ../edge
-npm ci
-npx wrangler versions upload --config wrangler.preview.jsonc --preview-alias pr-123
+node scripts/build.mjs --web-only
+edge/node_modules/.bin/wrangler preview --config wrangler.jsonc --name review-demo
 ```
 
-See Cloudflare’s [version URL documentation](https://developers.cloudflare.com/workers/versions-and-deployments/version-urls/).
+Existing manually uploaded PR aliases on `vela-preview` remain available, but new
+reviews use the direct Cloudflare integration. Those aliases and native branch
+Previews are separate Cloudflare deployment mechanisms.
+
+## Troubleshooting
+
+| Symptom | Action |
+| --- | --- |
+| Missing `previews` block | Use the root `wrangler.jsonc`; `preview_urls` alone is insufficient |
+| Missing frontend assets | Run the build command; it generates `web/dist` |
+| Worker name mismatch | Use `vela-ai-assistant` for the root demo config |
+| Initialization takes minutes | Inspect Cloudflare's build status; the repository code has not run yet |
+| Old GitHub `preview` records show failures | These came from the removed token-based workflow; they are historical records, not the current Worker status |
+
+See Cloudflare's [branch build guide](https://developers.cloudflare.com/workers/ci-cd/builds/build-branches/)
+and [Preview configuration](https://developers.cloudflare.com/workers/previews/configuration/).

@@ -17,8 +17,8 @@ Unchanged builds reuse the verified output. Cache metadata lives in ignored `.ca
 
 Build caching does not replace tests. Run `make test` and `make lint` for checks.
 GitHub CI still runs frontend/backend/edge tests, types, lint, audits, container
-checks, and security scans. The separate preview workflow builds and uploads
-without duplicating those checks. A review preview is not a passing-CI claim.
+checks, and security scans. Cloudflare builds and deploys previews through its direct GitHub integration.
+A review preview is not a passing-CI claim.
 
 ## Deployment
 

@@ -101,7 +101,8 @@ Existing deployments retain their stored secret. Verify deployment with:
 curl -fsS https://vela-assistant.dakshx.workers.dev/api/v1/health/ready
 ```
 
-For dashboard build commands, GitHub automation, or Docker hosting, see
+Cloudflare builds previews through its direct GitHub connection; GitHub Actions
+runs CI without Cloudflare credentials. For dashboard commands or Docker hosting, see
 [the deployment guide](docs/deployment.md). Review URLs use a separate demo Worker;
 merging a PR changes only its target branch. Production builds must use the branch
 that contains the desired changes.
@@ -119,7 +120,7 @@ docs/      Setup, deployment, architecture, and design guides
 
 ## Documentation
 
-- [Deployment guide](docs/deployment.md): production, dashboard builds, GitHub CD, and Docker hosting.
+- [Deployment guide](docs/deployment.md): production, direct GitHub integration, and Docker hosting.
 - [Build guide](docs/build.md): caching, CI commands, and loading optimizations.
 - [PR previews](docs/pr-previews.md): setup, review URLs, and demo behavior.
 - [Architecture and API](docs/architecture.md): request flows, routes, security, and monitoring.
