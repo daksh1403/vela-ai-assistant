@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AudioLines, Mic, MicOff, PhoneOff, RotateCcw, Sparkles } from 'lucide-react'
-import { Room, RoomEvent, Track } from 'livekit-client'
+import { Mic, MicOff, PhoneOff, RotateCcw, Sparkles, MessageSquareText } from 'lucide-react'
+import type { Room } from 'livekit-client'
 import { apiFetch, errorMessage } from './api'
+import Orb from './Orb'
 
 type VoiceSession = { id: string; ws_url: string; token: string; end_token: string; max_duration_seconds: number }
 type VoiceState = 'ready' | 'permission' | 'creating' | 'connecting' | 'listening' | 'thinking' | 'speaking' | 'reconnecting' | 'disconnected' | 'error'
@@ -58,6 +59,8 @@ export default function VoicePage({ active }: { active: boolean }) {
       probe = null
       if (generation !== generationRef.current) return
       setState('creating')
+      const { Room, RoomEvent, Track } = await import('livekit-client')
+      if (generation !== generationRef.current) return
       const session = await apiFetch<VoiceSession>('/voice/sessions', {})
       if (generation !== generationRef.current) {
         void apiFetch<void>(`/voice/sessions/${session.id}/end`, { end_token: session.end_token }).catch(() => {})
@@ -132,9 +135,9 @@ export default function VoicePage({ active }: { active: boolean }) {
   }
   const activeCall = ['connecting', 'listening', 'thinking', 'speaking', 'reconnecting'].includes(state)
   const loading = ['permission', 'creating', 'connecting'].includes(state)
-  return <section className="workspace voice-workspace"><div className="page-heading"><div><span className="eyebrow">THE CONVERSATION, OUT LOUD</span><h2>Talk with Vela</h2><p>A natural conversation, one voice at a time.</p></div><div className="voice-time">{activeCall ? `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}` : 'LIVE VOICE'}</div></div>
-    <div className="voice-layout"><div className="voice-stage"><div className={`voice-orb ${state}`}><AudioLines size={54} strokeWidth={1.2}/></div><div className="voice-state" role="status" aria-live="polite"><span className={`status-dot ${activeCall ? '' : 'muted'}`}/>{labels[state]}</div><p className="voice-guidance">{activeCall ? 'Speak naturally. Vela will respond when you pause.' : 'Use your microphone to have a real-time conversation.'}</p>{audioBlocked && activeCall && <button className="quiet-button" onClick={() => void roomRef.current?.startAudio().then(() => setAudioBlocked(false)).catch(() => setError('Audio playback is blocked. Check this site’s sound permission.'))}>Enable speaker audio</button>}{activeCall || loading ? <button className="end-button" onClick={() => void end()}><PhoneOff size={18}/> End conversation</button> : <button className="primary-button voice-start" onClick={() => void start()}><Mic size={18}/>{state === 'ready' ? 'Start conversation' : 'Start again'}</button>}<div className="voice-note"><MicOff size={14}/> Your microphone is used only while the session is active.</div></div>
-      <div className="transcript-panel"><div className="transcript-heading"><Sparkles size={17}/><span>Conversation transcript</span></div>{turns.length ? <div className="transcript-list" aria-live="polite">{turns.map((turn, index) => <div className="transcript-turn" key={index}><span>{turn.who}</span><p>{turn.text}</p></div>)}</div> : <div className="transcript-empty"><span>✳</span><p>Spoken words will appear here when the voice service provides a transcript.</p></div>}</div></div>
+  return <section className="workspace voice-workspace"><div className="page-heading"><div><span className="eyebrow">THINK OUT LOUD</span><h2>Talk with Vela</h2><p>Sometimes the best ideas start with a conversation.</p></div><div className="voice-time">{activeCall ? `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}` : 'LIVE VOICE'}</div></div>
+    <div className="voice-layout"><div className={`voice-stage ${state}`}><span className="voice-stage-label"><span className="voice-label-dot"/> VOICE ROOM</span><div className={`voice-orb ${state}`}><Orb/></div><div className={`waveform voice-waveform ${activeCall ? 'is-active' : ''}`} aria-hidden="true">{Array.from({ length: 25 }, (_, i) => <span key={i}/>)}</div><div className="voice-state" role="status" aria-live="polite"><span className={`status-dot ${activeCall ? '' : 'muted'}`}/>{labels[state]}</div><p className="voice-guidance">{activeCall ? 'Speak naturally. Vela will respond when you pause.' : 'Use your microphone to have a real-time conversation.'}</p>{audioBlocked && activeCall && <button className="quiet-button" onClick={() => void roomRef.current?.startAudio().then(() => setAudioBlocked(false)).catch(() => setError('Audio playback is blocked. Check this site’s sound permission.'))}>Enable speaker audio</button>}{activeCall || loading ? <button className="end-button" onClick={() => void end()}><PhoneOff size={18}/> End conversation</button> : <button className="primary-button voice-start" onClick={() => void start()}><Mic size={18}/>{state === 'ready' ? 'Start conversation' : 'Start again'}</button>}<div className="voice-note"><MicOff size={14}/> Your microphone is used only while the session is active.</div></div>
+      <div className="transcript-panel"><div className="transcript-heading"><Sparkles size={17}/><span>Conversation transcript</span><span className="transcript-badge">LIVE</span></div>{turns.length ? <div className="transcript-list" aria-live="polite">{turns.map((turn, index) => <div className="transcript-turn" key={index}><span>{turn.who}</span><p>{turn.text}</p></div>)}</div> : <div className="transcript-empty"><span className="transcript-empty-icon"><MessageSquareText size={27}/></span><h3>A place for your conversation.</h3><p>Start talking and your words will appear here when a transcript is available.</p></div>}</div></div>
     {error && <div className="inline-error" role="alert"><span>{error}</span>{state !== 'disconnected' && <button onClick={() => void start()}><RotateCcw size={15}/> Retry</button>}</div>}
   </section>
 }

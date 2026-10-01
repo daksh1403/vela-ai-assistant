@@ -1,0 +1,30 @@
+import { useState, type FormEvent } from 'react'
+import { ArrowRight, ArrowUp, ArrowUpRight, AudioLines, Image as ImageIcon, MessageSquareText, Mic, ShieldCheck, Sparkles } from 'lucide-react'
+import type { Page } from './App'
+import Orb from './Orb'
+import { inspiration } from './creative'
+
+type Mode = 'chat' | 'image' | 'voice'
+const modes = [
+  { id: 'chat' as Mode, label: 'Chat', icon: MessageSquareText },
+  { id: 'image' as Mode, label: 'Create image', icon: ImageIcon },
+  { id: 'voice' as Mode, label: 'Talk', icon: AudioLines },
+]
+const placeholders: Record<Mode, string> = { chat: 'What’s on your mind?', image: 'Describe something you’d love to see…', voice: 'Take the conversation off the keyboard.' }
+export default function HomePage({ navigate }: { navigate: (page: Page, prompt?: string) => void }) {
+  const [mode, setMode] = useState<Mode>('chat')
+  const [prompt, setPrompt] = useState('')
+  function submit(event: FormEvent) { event.preventDefault(); navigate(mode, prompt.trim()) }
+  return <section className="home-view">
+    <div className="home-hero"><div className="hero-text"><span className="hero-kicker"><span className="little-star">✦</span> YOUR MIND, WITH MORE ROOM</span><h1>A little curiosity.<br/><em>Endless possibility.</em></h1><p className="hero-copy">Think it through. Dream it up. Say it out loud.<br/>Meet the assistant that moves with you.</p></div><div className="hero-art"><Orb/><span className="orb-caption"><span/> A NEW WAY TO EXPLORE</span><span className="art-spark spark-one">✦</span><span className="art-spark spark-two">+</span></div></div>
+    <form className="home-composer" onSubmit={submit}><div className="home-composer-input"><Sparkles size={22}/><label className="sr-only" htmlFor="home-prompt">Your starting idea</label><textarea id="home-prompt" rows={1} value={prompt} onChange={event => setPrompt(event.target.value)} placeholder={placeholders[mode]} maxLength={mode === 'image' ? 2000 : 8000} disabled={mode === 'voice'} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); navigate(mode, prompt.trim()) } }}/><button className="home-send" aria-label={mode === 'voice' ? 'Open voice room' : `Continue in ${mode === 'image' ? 'image studio' : 'chat'}`} type="submit">{mode === 'voice' ? <Mic size={19}/> : <ArrowUp size={21}/>}</button></div><div className="home-composer-foot"><div className="mode-tabs" role="group" aria-label="Choose how to begin">{modes.map(({ id, label, icon: Icon }) => <button type="button" key={id} aria-pressed={mode === id} className={mode === id ? 'selected' : ''} onClick={() => { setMode(id); setPrompt('') }}><Icon size={14}/>{label}</button>)}</div><span className="composer-shortcut">{mode === 'voice' ? 'Microphone required' : 'Enter to continue'} <span>↵</span></span></div></form>
+    <div className="section-heading"><div><h2>One space. Three possibilities.</h2><p>Where do you want to take your idea?</p></div><span className="section-caption">BUILT FOR YOUR FLOW</span></div>
+    <div className="feature-grid">
+      <button className="feature-card chat-card" onClick={() => navigate('chat')} aria-label="Open chat"><div className="feature-card-top"><span className="card-icon"><MessageSquareText size={20}/></span><ArrowUpRight className="card-arrow" size={19}/></div><h3>A thought partner.</h3><p>Find the words, untangle a thought,<br/>or follow your curiosity.</p><div className="chat-card-demo" aria-hidden="true"><span className="demo-user">What if we tried something new?</span><span className="demo-assistant"><Sparkles size={13}/> Let’s see where it takes us.<span className="demo-cursor"/></span></div><span className="card-link">Start a conversation <ArrowRight size={14}/></span></button>
+      <button className="feature-card image-card" onClick={() => navigate('image')} aria-label="Open images"><div className="feature-card-top"><span className="card-icon"><ImageIcon size={20}/></span><ArrowUpRight className="card-arrow" size={19}/></div><h3>Imagine the impossible.</h3><p>From a few words to a whole new world.</p><div className="image-card-demo" aria-hidden="true"><img src="/inspiration/dunes.jpg" alt=""/><div className="chrome-sphere"/><span className="image-demo-tag"><Sparkles size={11}/> YOUR NEXT CREATION</span></div><span className="card-link">Open the image studio <ArrowRight size={14}/></span></button>
+      <button className="feature-card voice-card" onClick={() => navigate('voice')} aria-label="Open voice"><div className="feature-card-top"><span className="card-icon"><AudioLines size={20}/></span><span className="card-live"><span/> LIVE VOICE</span></div><h3>Less typing. More talking.</h3><p>A real conversation, at your pace.</p><div className="voice-card-demo" aria-hidden="true"><Orb className="mini-orb"/><div className="waveform">{Array.from({ length: 17 }, (_, i) => <span key={i}/>)}</div></div><span className="card-link">Find your voice <ArrowRight size={14}/></span></button>
+    </div>
+    <div className="inspiration-section"><div className="section-heading"><div><h2>A spark to get you started</h2><p>A little inspiration goes a long way.</p></div><button className="text-button" onClick={() => navigate('image')}>Explore image studio <ArrowUpRight size={15}/></button></div><div className="inspiration-grid">{inspiration.map((item, index) => <button key={item.title} className={`inspiration-card inspiration-${index}`} onClick={() => navigate('image', item.prompt)} aria-label={`Try prompt: ${item.title}`}><img src={item.image} alt={index === 0 ? 'Mountain peaks surrounded by soft cloud' : 'Sunlit sandstone formations in a desert landscape'} loading="lazy"/>{index === 0 ? <span className="landscape-moon"/> : <span className="chrome-sphere"/>}<div className="inspiration-info"><span>{item.category}</span><strong>{item.title}</strong></div><span className="inspiration-action"><ArrowUpRight size={20}/></span></button>)}</div></div>
+    <footer className="home-footer"><span><ShieldCheck size={14}/> Just you, your ideas, and Vela.</span><span>Conversations stay in this browser session.</span></footer>
+  </section>
+}
