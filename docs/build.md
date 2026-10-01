@@ -20,6 +20,32 @@ GitHub CI still runs frontend/backend/edge tests, types, lint, audits, container
 checks, and security scans. The separate preview workflow builds and uploads
 without duplicating those checks. A review preview is not a passing-CI claim.
 
+## Cloudflare dashboard builds
+
+For the dashboard Worker `vela-ai-assistant`, review the optimized build on branch
+`perf/build-and-loading` before merging it. With root directory `/`, use:
+
+| Setting | Value |
+| --- | --- |
+| Build command | `node scripts/build.mjs --ci --web-only` |
+| Deploy command (demo preview) | `edge/node_modules/.bin/wrangler preview --config edge/wrangler.preview.jsonc --worker-name vela-ai-assistant` |
+| Non-production branch deploy command | Same demo preview command |
+
+Enable builds for non-production branches to test the PR branch. These commands
+depend on files in this PR; `main` will not have them until the PRs are merged.
+The Worker name override matches the dashboard Worker while reusing the stateless
+demo entry point. Production deployment to `vela-assistant` remains a separate
+operation through `make deploy-cloudflare`.
+
+The dedicated preview config includes the `previews` block required by
+[`wrangler preview`](https://developers.cloudflare.com/workers/previews/configuration/).
+`preview_urls: true` alone enables version URLs and does not satisfy that command.
+Use the installed Wrangler binary and explicit config path to avoid a fresh
+root-level `npx` installation and selecting the wrong configuration.
+
+Cloudflare's **Initializing build environment** stage occurs before cloning or
+running this build script. Local build caching cannot shorten that platform stage.
+
 ## Frontend loading
 
 The chat screen loads its Markdown renderer when sending a message; completed
