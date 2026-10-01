@@ -1,0 +1,81 @@
+name: Cloudflare preview status
+on:
+  check_run:
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      check_run_id:
+        description: Cloudflare check run ID to retry publishing
+        required: true
+        type: string
+  pull_request:
+    types: [closed]
+permissions:
+  contents: read
+  checks: read
+  pull-requests: write
+  deployments: write
+concurrency:
+  group: cloudflare-status-${{ github.event.check_run.head_sha || github.event.pull_request.number || inputs.check_run_id }}
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'check_run' && github.event.check_run.app.slug == 'cloudflare-workers-and-pages' && github.event.check_run.name == 'Workers Builds: vela-ai-assistant' && github.event.check_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify Cloudflare preview and publish its URL
+        uses: actions/github-script@v7
+        env:
+          CHECK_RUN_ID: ${{ inputs.check_run_id }}
+        with:
+          script: |
+            const check = context.payload.check_run || (await github.rest.checks.get({ ...context.repo, check_run_id: Number(process.env.CHECK_RUN_ID) })).data;
+            if (check.app.slug !== 'cloudflare-workers-and-pages' || check.name !== 'Workers Builds: vela-ai-assistant' || check.conclusion !== 'success') {
+              core.notice('Only successful checks from the connected Cloudflare app can publish a preview.');
+              return;
+            }
+            const match = new URL(check.details_url).pathname.match(/\/previews\/([a-z0-9-]+)\/builds\//);
+            if (!match) {
+              core.notice('This check is not a branch Preview build.');
+              return;
+            }
+            const url = `https://${match[1]}-vela-ai-assistant.dakshx.workers.dev`;
+            const references = check.pull_requests.length ? check.pull_requests : await github.paginate(github.rest.repos.listPullRequestsAssociatedWithCommit, { ...context.repo, commit_sha: check.head_sha });
+            for (const reference of references) {
+              const { data: pr } = await github.rest.pulls.get({ ...context.repo, pull_number: reference.number });
+              if (pr.state !== 'open' || pr.head.sha !== check.head_sha || pr.head.repo.full_name !== `${context.repo.owner}/${context.repo.repo}`) continue;
+              let ready = false;
+              for (let attempt = 0; attempt < 6; attempt++) {
+                try {
+                  const response = await fetch(`${url}/api/v1/health/ready`, { signal: AbortSignal.timeout(10000) });
+                  if (response.ok && response.headers.get('x-vela-preview') === 'demo') {
+                    const health = await response.json();
+                    ready = health.status === 'ok' && health.demo === true;
+                    if (ready) break;
+                  }
+                } catch (error) { core.info(`Preview probe ${attempt + 1}: ${error.message}`); }
+                if (attempt < 5) await new Promise(resolve => setTimeout(resolve, 3000));
+              }
+              if (!ready) throw new Error('Cloudflare reported success, but the demo preview is not ready.');
+              const { data: deployment } = await github.rest.repos.createDeployment({ ...context.repo, ref: check.head_sha, environment: `preview-pr-${pr.number}`, auto_merge: false, required_contexts: [], production_environment: false, transient_environment: true });
+              const { data: latest } = await github.rest.pulls.get({ ...context.repo, pull_number: pr.number });
+              const current = latest.state === 'open' && latest.head.sha === check.head_sha;
+              await github.rest.repos.createDeploymentStatus({ ...context.repo, deployment_id: deployment.id, state: current ? 'success' : 'inactive', environment_url: url, log_url: check.details_url, description: 'Built by the direct Cloudflare GitHub integration.' });
+              if (!current) continue;
+              const marker = '<!-- vela-pr-preview -->';
+              const body = `${marker}\n### Vela preview\n\n[Open this PR’s preview](${url})\n\nCommit: \`${check.head_sha}\`\n\nChat and images use demo responses; live voice is available on production.\n\n[Cloudflare build](${check.details_url})`;
+              const comments = await github.paginate(github.rest.issues.listComments, { ...context.repo, issue_number: pr.number });
+              const previous = comments.find(comment => comment.user.type === 'Bot' && comment.body.includes(marker));
+              if (previous) await github.rest.issues.updateComment({ ...context.repo, comment_id: previous.id, body });
+              else await github.rest.issues.createComment({ ...context.repo, issue_number: pr.number, body });
+              await core.summary.addLink(`PR #${pr.number} preview`, url).write();
+            }
+  close:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const deployments = await github.paginate(github.rest.repos.listDeployments, { ...context.repo, environment: `preview-pr-${context.issue.number}` });
+            for (const deployment of deployments) await github.rest.repos.createDeploymentStatus({ ...context.repo, deployment_id: deployment.id, state: 'inactive' });

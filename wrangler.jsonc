@@ -1,0 +1,21 @@
+{
+  "$schema": "./edge/node_modules/wrangler/config-schema.json",
+  "name": "vela-ai-assistant",
+  "main": "edge/src/preview.ts",
+  "compatibility_date": "2026-09-29",
+  "workers_dev": true,
+  "preview_urls": true,
+  "previews": {},
+  "assets": {
+    "directory": "web/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": true
+  },
+  "observability": {
+    "enabled": true
+  },
+  "build": {
+    "command": "node scripts/build.mjs --web-only"
+  }
+}

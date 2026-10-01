@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | Production | `vela-assistant` / `edge/wrangler.jsonc` | Real chat, image, and voice API with stored provider secret |
 | PR review | `vela-preview` / `edge/wrangler.preview.jsonc` | Demo responses and stateless review URLs |
-| Dashboard demo | `vela-ai-assistant` with the preview config and explicit name override | Native Cloudflare branch previews |
+| Dashboard demo | `vela-ai-assistant` / root `wrangler.jsonc` | Native Cloudflare branch previews |
 
 Deploying a review URL does not update production. Merging a PR updates its target
 branch; only changes merged into the production build branch reach its next deployment.
@@ -57,7 +57,7 @@ Select a branch containing `scripts/build.mjs` and the intended UI. Use root dir
 | Setting | Value |
 | --- | --- |
 | Build command | `node scripts/build.mjs --ci --web-only` |
-| Deploy command | `edge/node_modules/.bin/wrangler preview --config edge/wrangler.preview.jsonc --worker-name vela-ai-assistant` |
+| Deploy command | `edge/node_modules/.bin/wrangler preview --config wrangler.jsonc` |
 | Non-production branch deploy command | Same demo preview command |
 
 Enable non-production branch builds when reviewing a feature branch. The demo config
@@ -67,20 +67,20 @@ and explicit config path avoid downloading a second Wrangler at the repository r
 Cloudflare environment initialization happens before cloning and running the build.
 Build script caching cannot reduce that initialization stage.
 
-## GitHub production automation
+## Direct GitHub integration
 
-The `Deploy Cloudflare` workflow deploys after CI succeeds on `main`, or on manual dispatch.
-Configure the `production` GitHub environment with:
+Cloudflare is connected directly to the repository and manages its own build token.
+GitHub Actions runs CI and publishes verified preview links using its built-in token;
+no Cloudflare GitHub Actions secret is required. The connected
+`vela-ai-assistant` Worker uses the root demo configuration for branch previews.
 
-| Type | Name |
-| --- | --- |
-| Secret | `CLOUDFLARE_API_TOKEN` |
-| Secret | `CLOUDFLARE_ACCOUNT_ID` |
-| Variable | `PUBLIC_APP_URL` |
+The separate production Worker `vela-assistant` uses `edge/wrangler.jsonc`. To enable
+production builds directly in Cloudflare, connect that Worker to this repository and
+use the production settings above. The existing production site can also be updated
+with `make deploy-cloudflare` using local Wrangler authentication.
 
-Set repository variable `DEPLOY_ENABLED=true` after configuration. The provider key
-stays in Cloudflare. PR automation has separate repository credentials described in
-[the preview guide](pr-previews.md).
+The former GitHub deployment workflows have been removed. See
+[PR previews](pr-previews.md) for review instructions and troubleshooting.
 
 ## Docker on a VM
 
