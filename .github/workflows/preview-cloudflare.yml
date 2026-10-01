@@ -34,10 +34,8 @@ jobs:
           cache-dependency-path: |
             web/package-lock.json
             edge/package-lock.json
-      - run: npm ci && npm run lint && npm run typecheck && npm test && npm run build
-        working-directory: web
-      - run: npm ci && npm run typecheck && npm test
-        working-directory: edge
+      - name: Build preview (CI checks run in the CI workflow)
+        run: node scripts/build.mjs --ci --web-only
       - name: Upload isolated UI preview
         id: upload
         working-directory: edge

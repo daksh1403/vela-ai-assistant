@@ -1,4 +1,4 @@
-.PHONY: setup dev-api dev-web test lint format build docker-up docker-down logs health compose-check security-scan deploy-cloudflare
+.PHONY: setup dev-api dev-web test lint format build build-force build-check docker-up docker-down logs health compose-check security-scan deploy-cloudflare
 setup:
 	cd api && python3 -m venv .venv && .venv/bin/pip install uv==0.9.15 && UV_CACHE_DIR=.uv-cache .venv/bin/uv sync --frozen --extra dev --python .venv/bin/python
 	cd web && npm ci
@@ -24,8 +24,13 @@ format:
 	cd api && .venv/bin/ruff format app tests
 
 build:
-	cd web && npm run build
-	cd edge && npm run build && npm run dry-run
+	node scripts/build.mjs
+
+build-force:
+	node scripts/build.mjs --force
+
+build-check: build
+	cd edge && npm run dry-run
 
 docker-up:
 	docker compose up --build -d
@@ -46,5 +51,5 @@ security-scan:
 	cd web && npm audit --omit=dev --audit-level=high
 	cd edge && npm audit --omit=dev --audit-level=high
 
-deploy-cloudflare: build
+deploy-cloudflare: build-check
 	cd edge && npx wrangler deploy
